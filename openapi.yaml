@@ -1,0 +1,196 @@
+---
+openapi: "3.0.3"
+info:
+  title: User service
+  version: "1.0"
+servers:
+  - url: http://localhost:3000/
+    description: Local development
+components:
+  schemas:
+    user:
+      type: object
+      required:
+        - username
+        - name
+      properties:
+        username:
+          type: string
+        name:
+          type: string
+    new_user:
+      type: object
+      required:
+        - username
+        - name
+      properties:
+        username:
+          type: string
+        name:
+          type: string
+    get_user_error:
+      oneOf:
+        - $ref: "#/components/schemas/get_user_error_not_found"
+        - $ref: "#/components/schemas/unauthorized"
+        - $ref: "#/components/schemas/unauthenticated"
+      discriminator:
+        propertyName: error
+        mapping:
+          not_found: "#/components/schemas/get_user_error_not_found"
+          unauthorized: "#/components/schemas/unauthorized"
+          unauthenticated: "#/components/schemas/unauthenticated"
+    get_user_error_type:
+      type: string
+      enum:
+        - not_found
+        - unauthorized
+        - unauthenticated
+    get_user_error_not_found:
+      type: object
+      required:
+        - error
+        - details
+      properties:
+        error:
+          $ref: "#/components/schemas/get_user_error_type"
+        details:
+          type: object
+          required:
+            - username
+          properties:
+            username:
+              type: string
+
+    create_user_error:
+      oneOf:
+        - $ref: "#/components/schemas/create_user_error_username_already_exists"
+        - $ref: "#/components/schemas/create_user_error_invalid_username"
+        - $ref: "#/components/schemas/create_user_error_invalid_name"
+      discriminator:
+        propertyName: error
+        mapping:
+          UsernameAlreadyExists: "#/components/schemas/create_user_error_username_already_exists"
+          InvalidUsername: "#/components/schemas/create_user_error_invalid_username"
+          InvalidName: "#/components/schemas/create_user_error_invalid_name"
+    create_user_error_type:
+      type: string
+      enum:
+        - not_found
+    create_user_error_username_already_exists:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/create_user_error_type"
+    create_user_error_invalid_username:
+      type: object
+      required:
+        - error
+        - details
+      properties:
+        error:
+          $ref: "#/components/schemas/create_user_error_type"
+        details:
+          type: string
+          enum:
+            - TooShort
+            - TooLong
+            - InvalidCharacters
+    create_user_error_invalid_name:
+      type: object
+      required:
+        - error
+        - details
+      properties:
+        error:
+          $ref: "#/components/schemas/create_user_error_type"
+        details:
+          type: string
+          enum:
+            - TooShort
+            - TooLong
+            - InvalidCharacters
+
+    unauthenticated:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          $ref: "#/components/schemas/get_user_error_type"
+    unauthorized:
+      type: object
+      required:
+        - error
+        - details
+      properties:
+        error:
+          $ref: "#/components/schemas/get_user_error_type"
+        details:
+          type: object
+          properties:
+            action:
+              type: string
+  responses:
+    Unauthenticated:
+      description: Unauthenticated
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/get_user_error"
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/get_user_error"
+paths:
+  /users:
+    post:
+      operationId: create_user
+      summary: "Create a new user"
+      description: "Create a new user"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/new_user"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user"
+        default:
+          description: Create user error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/create_user_error"
+  /users/{username}:
+    parameters:
+      - name: username
+        required: true
+        schema:
+          type: string
+        in: path
+    get:
+      operationId: get_user
+      summary: "Get a single user"
+      description: "Get a single user"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/user"
+        default:
+          description: Get user error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/get_user_error"

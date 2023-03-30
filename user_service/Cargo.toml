@@ -1,0 +1,29 @@
+[package]
+name = "user_service"
+version = "0.0.0"
+edition = "2021"
+
+[lib]
+name = "user_service"
+path = "src/lib.rs"
+
+[[bin]]
+name = "user_service"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { workspace = true }
+either = { workspace = true }
+http = { workspace = true }
+opentelemetry = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true }
