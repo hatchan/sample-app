@@ -1,7 +1,9 @@
 use crate::models;
 use axum::extract::Path;
 use axum::Json;
+use tracing::{error, instrument};
 
+#[instrument(err)]
 pub async fn get_user(
     Path(username): Path<String>,
 ) -> Result<Json<models::User>, models::GetUserError> {
@@ -17,6 +19,7 @@ pub async fn get_user(
     }))
 }
 
+#[instrument(err)]
 pub async fn create_user(
     Json(new_user): Json<models::NewUser>,
 ) -> Result<Json<models::User>, models::CreateUserError> {
