@@ -1,7 +1,7 @@
 use crate::models;
 use axum::extract::Path;
 use axum::Json;
-use tracing::{error, instrument};
+use tracing::instrument;
 
 #[instrument(err)]
 pub async fn get_user(
