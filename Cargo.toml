@@ -4,9 +4,11 @@ members = ["user_service"]
 [workspace.dependencies]
 anyhow = "1.0"
 axum = "0.6"
+clap = { version = "4.2", features = ["derive", "env"] }
 either = "1.8"
 http = "0.2"
-opentelemetry = "0.18"
+opentelemetry = { version = "0.18", features = ["rt-tokio"] }
+opentelemetry-otlp = "0.11"
 reqwest = { version = "0.11", default-features = false, features = [
     "rustls-tls",
 ] }
@@ -18,3 +20,4 @@ tower-http = { version = "0.4", features = ["trace", "cors"] }
 tracing = { version = "0.1" }
 tracing-opentelemetry = "0.18"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+url = { version = "2.3" }

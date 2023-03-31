@@ -1,55 +1,88 @@
-use axum::routing::{get, post};
-use axum::Router;
-use opentelemetry::sdk::export::trace::stdout;
-use std::net::SocketAddr;
-use tower_http::cors::CorsLayer;
-use tower_http::trace::TraceLayer;
-use tracing::debug;
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use opentelemetry::sdk::{trace, Resource};
+use opentelemetry::KeyValue;
+use opentelemetry_otlp::WithExportConfig;
+use tracing::{debug, error};
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
+use url::Url;
 
+mod commands;
 mod handlers;
 mod models;
 
-#[tokio::main]
-async fn main() {
-    init_logging().await;
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Application {
+    #[command(subcommand)]
+    command: SubCommands,
 
-    let cors = CorsLayer::very_permissive();
+    /// Enable tracing
+    #[clap(long, env)]
+    tracing: bool,
 
-    // build our application with a route
-    let app = Router::new()
-        .route("/users/:user_name", get(handlers::get_user))
-        .route("/users", post(handlers::create_user))
-        .layer(cors)
-        .layer(TraceLayer::new_for_http());
-
-    // run our app with hyper
-    // `axum::Server` is a re-export of `hyper::Server`
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    debug!("listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    /// Endpoint of the OTLP collector
+    #[clap(long, env, default_value = "http://localhost:4317")]
+    otlp_endpoint: Option<Url>,
 }
 
-async fn init_logging() {
-    // OTEL output - stdout for now (should be jaeger or zipkin or otel collector)
-    // This is part of the opentelemetry crate
-    let tracer = stdout::new_pipeline()
-        .with_pretty_print(true)
-        .install_simple();
+#[derive(Subcommand)]
+enum SubCommands {
+    /// Start the server
+    Start(commands::start::StartArgs),
+}
 
-    // This converts traces from the tracing crate to the tracer specified above.
-    let otel_layer = OpenTelemetryLayer::new(tracer);
+#[tokio::main]
+async fn main() -> Result<()> {
+    let app = Application::parse();
 
-    // Finally create a subscriber and append the OpenTelemetry layer to it.
+    init_logging(&app).await;
+
+    let result = match app.command {
+        SubCommands::Start(args) => commands::start::handle_command(args).await,
+    };
+
+    match result {
+        Ok(_) => debug!("Command completed successfully"),
+        Err(e) => error!("Command failed: {:#}", e),
+    }
+
+    Ok(())
+}
+
+async fn init_logging(app: &Application) {
     let subscriber = tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
-        .finish()
-        .with(otel_layer);
+        .finish();
 
-    tracing::subscriber::set_global_default(subscriber).expect("unable to set default subscriber");
+    if app.tracing {
+        let tracer =
+            opentelemetry_otlp::new_pipeline()
+                .tracing()
+                .with_exporter(
+                    opentelemetry_otlp::new_exporter()
+                        .tonic()
+                        .with_endpoint("http://localhost:4317"),
+                )
+                .with_trace_config(trace::config().with_resource(Resource::new(vec![
+                    KeyValue::new("service.name", "user_service"),
+                ])))
+                .install_batch(opentelemetry::runtime::Tokio)
+                .expect("unable to install tracer");
+
+        // This converts traces from the tracing crate to the tracer specified above.
+        let otel_layer = OpenTelemetryLayer::new(tracer);
+
+        // Finally create a subscriber and append the OpenTelemetry layer to it.
+        let subscriber = subscriber.with(otel_layer);
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("unable to set default subscriber");
+
+        debug!("Enabling tracing support");
+    } else {
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("unable to set default subscriber");
+    }
 }
