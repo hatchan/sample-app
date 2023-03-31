@@ -1,7 +1,6 @@
 use crate::models;
 use axum::extract::Path;
 use axum::Json;
-use tracing::info;
 
 pub async fn get_user(
     Path(username): Path<String>,
