@@ -1,4 +1,6 @@
-use crate::models;
+use crate::models::{
+    self, CreateUserError, GetUserError, HandlerError, InvalidNameReason, InvalidUsernameReason,
+};
 use axum::extract::Path;
 use axum::Json;
 use tracing::instrument;
@@ -6,11 +8,13 @@ use tracing::instrument;
 #[instrument(err)]
 pub async fn get_user(
     Path(username): Path<String>,
-) -> Result<Json<models::User>, models::GetUserError> {
+) -> Result<Json<models::User>, HandlerError<GetUserError>> {
     check_auth(&username)?;
 
     if username == "not_found" {
-        return Err(models::GetUserError::UserNotFound { username });
+        return Err(HandlerError::service_error(GetUserError::UserNotFound {
+            username,
+        }));
     }
 
     Ok(Json(models::User {
@@ -22,35 +26,37 @@ pub async fn get_user(
 #[instrument(err)]
 pub async fn create_user(
     Json(new_user): Json<models::NewUser>,
-) -> Result<Json<models::User>, models::CreateUserError> {
+) -> Result<Json<models::User>, HandlerError<CreateUserError>> {
     if new_user.username.is_empty() {
-        return Err(models::CreateUserError::InvalidUsername(
-            models::InvalidUsernameReason::TooShort,
+        return Err(HandlerError::service_error(
+            CreateUserError::InvalidUsername(InvalidUsernameReason::TooShort),
         ));
     } else if new_user.username.len() > 20 {
-        return Err(models::CreateUserError::InvalidUsername(
-            models::InvalidUsernameReason::TooLong,
+        return Err(HandlerError::service_error(
+            CreateUserError::InvalidUsername(InvalidUsernameReason::TooLong),
         ));
     } else if new_user.username == "invalid" {
-        return Err(models::CreateUserError::InvalidUsername(
-            models::InvalidUsernameReason::InvalidCharacters,
+        return Err(HandlerError::service_error(
+            CreateUserError::InvalidUsername(InvalidUsernameReason::InvalidCharacters),
         ));
     } else if new_user.username == "taken" {
-        return Err(models::CreateUserError::UsernameAlreadyExists);
+        return Err(HandlerError::service_error(
+            CreateUserError::UsernameAlreadyExists,
+        ));
     }
 
     if new_user.name.is_empty() {
-        return Err(models::CreateUserError::InvalidName(
-            models::InvalidNameReason::TooShort,
-        ));
+        return Err(HandlerError::service_error(CreateUserError::InvalidName(
+            InvalidNameReason::TooShort,
+        )));
     } else if new_user.name.len() > 20 {
-        return Err(models::CreateUserError::InvalidName(
-            models::InvalidNameReason::TooLong,
-        ));
+        return Err(HandlerError::service_error(CreateUserError::InvalidName(
+            InvalidNameReason::TooLong,
+        )));
     } else if new_user.name == "invalid" {
-        return Err(models::CreateUserError::InvalidName(
-            models::InvalidNameReason::InvalidCharacters,
-        ));
+        return Err(HandlerError::service_error(CreateUserError::InvalidName(
+            InvalidNameReason::InvalidCharacters,
+        )));
     }
 
     Ok(Json(models::User {
@@ -64,9 +70,7 @@ pub async fn create_user(
 pub fn check_auth(username: &str) -> Result<(), models::AuthError> {
     match username {
         "unauthenticated" => Err(models::AuthError::Unauthenticated),
-        "unauthorized" => Err(models::AuthError::Unauthorized {
-            action: Some("get_user".to_string()),
-        }),
+        "unauthorized" => Err(models::AuthError::Unauthorized),
         _ => Ok(()),
     }
 }
