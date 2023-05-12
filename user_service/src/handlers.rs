@@ -1,14 +1,15 @@
 use crate::models::{
     self, CreateUserError, GetUserError, HandlerError, InvalidNameReason, InvalidUsernameReason,
+    User,
 };
 use axum::extract::Path;
 use axum::Json;
-use tracing::instrument;
+use tracing::{debug, instrument};
 
 #[instrument(err)]
 pub async fn get_user(
     Path(username): Path<String>,
-) -> Result<Json<models::User>, HandlerError<GetUserError>> {
+) -> Result<Json<User>, HandlerError<GetUserError>> {
     check_auth(&username)?;
 
     if username == "not_found" {
@@ -27,6 +28,7 @@ pub async fn get_user(
 pub async fn create_user(
     Json(new_user): Json<models::NewUser>,
 ) -> Result<Json<models::User>, HandlerError<CreateUserError>> {
+    debug!("creating user: {:?}", new_user);
     if new_user.username.is_empty() {
         return Err(HandlerError::service_error(
             CreateUserError::InvalidUsername(InvalidUsernameReason::TooShort),
