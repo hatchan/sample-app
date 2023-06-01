@@ -1,7 +1,9 @@
 use crate::models;
 use axum::extract::Path;
 use axum::Json;
-use tracing::instrument;
+use opentelemetry::trace::TraceContextExt;
+use tracing::{error, info, instrument, Span};
+use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 #[instrument(err)]
 pub async fn get_user(
@@ -23,6 +25,9 @@ pub async fn get_user(
 pub async fn create_user(
     Json(new_user): Json<models::NewUser>,
 ) -> Result<Json<models::User>, models::CreateUserError> {
+    let trace_id = Span::current().context().span().span_context().trace_id();
+    error!(trace_id = %trace_id, "creating user");
+
     if new_user.username.is_empty() {
         return Err(models::CreateUserError::InvalidUsername(
             models::InvalidUsernameReason::TooShort,
