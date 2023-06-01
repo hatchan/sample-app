@@ -1,4 +1,5 @@
-use axum::{response::IntoResponse, Json};
+use axum::response::IntoResponse;
+use axum::Json;
 use http::StatusCode;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -12,18 +13,7 @@ pub enum AuthError {
 
     /// This occurs if the credentials provided are not allowed to do the specified action.
     #[error("unauthorized")]
-    Unauthorized { action: Option<String> },
-}
-
-impl IntoResponse for AuthError {
-    fn into_response(self) -> axum::response::Response {
-        let status_code = match self {
-            AuthError::Unauthenticated => StatusCode::UNAUTHORIZED,
-            AuthError::Unauthorized { .. } => StatusCode::FORBIDDEN,
-        };
-
-        (status_code, Json(self)).into_response()
-    }
+    Unauthorized,
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq)]
@@ -40,25 +30,60 @@ pub struct NewUser {
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Error)]
 #[serde(tag = "error", content = "details")]
+pub enum HandlerError<E> {
+    /// This occurs if a request is made without any authentication details.
+    #[error("unauthenticated")]
+    Unauthenticated,
+
+    /// This occurs if the credentials provided are not allowed to do the specified action.
+    #[error("unauthorized")]
+    Unauthorized,
+
+    #[error(transparent)]
+    ServiceError(E),
+}
+
+impl<E> HandlerError<E> {
+    pub fn service_error(err: E) -> Self {
+        HandlerError::ServiceError(err)
+    }
+}
+
+impl<E> From<AuthError> for HandlerError<E> {
+    fn from(err: AuthError) -> Self {
+        match err {
+            AuthError::Unauthenticated => HandlerError::Unauthenticated,
+            AuthError::Unauthorized => HandlerError::Unauthorized,
+        }
+    }
+}
+
+impl<E> IntoResponse for HandlerError<E>
+where
+    E: IntoResponse + Serialize,
+{
+    fn into_response(self) -> axum::response::Response {
+        let status_code = match self {
+            HandlerError::Unauthenticated => StatusCode::UNAUTHORIZED,
+            HandlerError::Unauthorized => StatusCode::FORBIDDEN,
+            HandlerError::ServiceError(service_err) => return service_err.into_response(),
+        };
+
+        (status_code, Json(self)).into_response()
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Error)]
+#[serde(tag = "error", content = "details")]
 pub enum GetUserError {
     #[error("user was not found: {username}")]
     UserNotFound { username: String },
-
-    #[error(transparent)]
-    AuthError(AuthError),
-}
-
-impl From<AuthError> for GetUserError {
-    fn from(auth_error: AuthError) -> Self {
-        Self::AuthError(auth_error)
-    }
 }
 
 impl IntoResponse for GetUserError {
     fn into_response(self) -> axum::response::Response {
         let status_code = match self {
             GetUserError::UserNotFound { .. } => StatusCode::NOT_FOUND,
-            GetUserError::AuthError(auth_err) => return auth_err.into_response(),
         };
 
         (status_code, Json(self)).into_response()

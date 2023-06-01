@@ -17,7 +17,6 @@ path = "src/main.rs"
 anyhow = { workspace = true }
 axum = { workspace = true }
 clap = { workspace = true }
-either = { workspace = true }
 http = { workspace = true }
 opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true }

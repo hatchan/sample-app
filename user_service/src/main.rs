@@ -1,3 +1,5 @@
+use std::process;
+
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use opentelemetry::sdk::{trace, Resource};
@@ -9,6 +11,7 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
+mod client;
 mod commands;
 mod handlers;
 mod models;
@@ -30,8 +33,11 @@ struct Application {
 
 #[derive(Subcommand)]
 enum SubCommands {
+    /// Invoke a server
+    Client(commands::client::Args),
+
     /// Start the server
-    Start(commands::start::StartArgs),
+    Start(commands::start::Args),
 }
 
 #[tokio::main]
@@ -41,12 +47,16 @@ async fn main() -> Result<()> {
     init_logging(&app).await;
 
     let result = match app.command {
+        SubCommands::Client(args) => commands::client::handle_command(args).await,
         SubCommands::Start(args) => commands::start::handle_command(args).await,
     };
 
     match result {
         Ok(_) => debug!("Command completed successfully"),
-        Err(e) => error!("Command failed: {:#}", e),
+        Err(e) => {
+            error!("Command failed: {:#}", e);
+            process::exit(1)
+        }
     }
 
     Ok(())
