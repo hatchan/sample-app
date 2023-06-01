@@ -85,7 +85,7 @@ fn init_logging(app: &Application) -> Result<()> {
 
     // The trace layer will send traces to the configured tracing backend
     // depending on the `tracing` flag.
-    let trace_layer = if app.tracing {
+    let trace_layer = if false {
         // This tracer is responsible for sending the actual traces.
         let tracer = opentelemetry_otlp::new_pipeline()
             .tracing()

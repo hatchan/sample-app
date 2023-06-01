@@ -26,9 +26,9 @@ pub async fn handle_command(args: Args) -> Result<()> {
     let app = Router::new()
         .route("/users/:user_name", get(handlers::get_user))
         .route("/users", post(handlers::create_user))
-        .layer(CorsLayer::very_permissive())
-        // .layer(TraceLayer::new_for_http())
-        .layer(OtlpLayer::new());
+        .layer(CorsLayer::very_permissive());
+    // .layer(TraceLayer::new_for_http())
+    // .layer(OtlpLayer::new());
 
     let server = axum::Server::try_bind(&args.listen_address)
         .with_context(|| format!("failed to bind to {}", args.listen_address))?
