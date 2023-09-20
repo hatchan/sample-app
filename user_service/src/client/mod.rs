@@ -104,8 +104,6 @@ fn map_to_client_err<E>(err: reqwest::Error) -> ClientError<E> {
 #[derive(Deserialize, Serialize, Debug, PartialEq, Error)]
 #[serde(tag = "error", content = "details")]
 pub enum ClientError<E> {
-    Unauthenticated,
-    Unauthorized,
     ConnectionError,
     TimeoutError,
     UnknownError,
