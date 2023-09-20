@@ -1,10 +1,9 @@
-use std::process;
-
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use opentelemetry::sdk::{trace, Resource};
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::WithExportConfig;
+use std::process;
 use tracing::{debug, error};
 use tracing_opentelemetry::OpenTelemetryLayer;
 use tracing_subscriber::layer::SubscriberExt;

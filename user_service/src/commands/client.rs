@@ -1,11 +1,8 @@
+use crate::client::{Client, ClientError};
+use crate::models::{CreateUserError, GetUserError, NewUser};
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use tracing::error;
-
-use crate::{
-    client::{Client, ClientError},
-    models::{CreateUserError, GetUserError, NewUser, User},
-};
 
 #[derive(Parser)]
 pub struct Args {
@@ -106,4 +103,23 @@ async fn handle_create(args: CreateArgs) -> Result<()> {
     };
 
     Ok(())
+}
+
+pub enum SdkError<E> {
+    /// The request failed during construction. It was not dispatched over the network.
+    ConstructionFailure(ConstructionFailure),
+
+    /// The request failed due to a timeout. The request MAY have been sent and received.
+    TimeoutError(TimeoutError),
+
+    /// The request failed during dispatch. An HTTP response was not received. The request MAY
+    /// have been sent.
+    DispatchFailure(DispatchFailure),
+
+    /// A response was received but it was not parseable according the the protocol (for example
+    /// the server hung up without sending a complete response)
+    ResponseError(ResponseError),
+
+    /// An error response was received from the service
+    ServiceError(ServiceError<E>),
 }
